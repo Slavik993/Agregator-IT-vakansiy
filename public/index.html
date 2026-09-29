@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IT-Агрегатор вакансий</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="container topbar__inner">
+      <a href="/" class="logo">IT<span>Агрегатор</span></a>
+      <nav class="nav">
+        <a href="#candidates" data-tab="candidates">Кандидаты</a>
+        <a href="#vacancies" data-tab="vacancies">Вакансии</a>
+        <a href="#matches" data-tab="matches">Подбор</a>
+        <a href="#offers" data-tab="offers">Офферы</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Кандидаты -->
+    <section id="candidates" class="tab-section">
+      <div class="section-head">
+        <h1>Соискатели</h1>
+        <button class="btn" id="btn-add-candidate">+ Добавить кандидата</button>
+      </div>
+      <form id="candidate-form" class="form hidden">
+        <input name="full_name" placeholder="ФИО *" required />
+        <input name="fsp_id" placeholder="ID участника ФСП (например, FSP-0001)" />
+        <input name="email" placeholder="Email" />
+        <input name="telegram" placeholder="Telegram" />
+        <input name="stack" placeholder="Стек через запятую: python,go *" required />
+        <select name="grade" required>
+          <option value="">Грейд *</option>
+          <option>junior</option>
+          <option>middle</option>
+          <option>senior</option>
+          <option>lead</option>
+        </select>
+        <select name="role" required>
+          <option value="">Роль *</option>
+          <option>backend</option>
+          <option>frontend</option>
+          <option>fullstack</option>
+          <option>ml</option>
+          <option>devops</option>
+          <option>robotics</option>
+          <option>qa</option>
+        </select>
+        <input name="experience_years" type="number" min="0" placeholder="Опыт, лет" />
+        <select name="work_format">
+          <option value="office">Офис</option>
+          <option value="hybrid">Гибрид</option>
+          <option value="remote">Удалённо</option>
+        </select>
+        <input name="city" placeholder="Город" />
+        <div class="form__actions">
+          <button class="btn btn--primary" type="submit">Сохранить</button>
+          <button class="btn btn--ghost" type="button" id="cancel-candidate">Отмена</button>
+        </div>
+      </form>
+      <div id="candidates-list" class="cards"></div>
+    </section>
+
+    <!-- Вакансии -->
+    <section id="vacancies" class="tab-section hidden">
+      <div class="section-head">
+        <h1>Вакансии</h1>
+        <button class="btn" id="btn-add-vacancy">+ Добавить вакансию</button>
+      </div>
+      <form id="vacancy-form" class="form hidden">
+        <input name="title" placeholder="Название *" required />
+        <input name="company" placeholder="Компания *" required />
+        <textarea name="description" placeholder="Описание"></textarea>
+        <input name="stack" placeholder="Стек через запятую: python,go *" required />
+        <select name="grade" required>
+          <option value="">Грейд *</option>
+          <option>junior</option>
+          <option>middle</option>
+          <option>senior</option>
+          <option>lead</option>
+        </select>
+        <select name="role" required>
+          <option value="">Роль *</option>
+          <option>backend</option>
+          <option>frontend</option>
+          <option>fullstack</option>
+          <option>ml</option>
+          <option>devops</option>
+          <option>robotics</option>
+          <option>qa</option>
+        </select>
+        <input name="salary_from" type="number" min="0" placeholder="Зарплата от" />
+        <input name="salary_to" type="number" min="0" placeholder="Зарплата до" />
+        <select name="work_format">
+          <option value="office">Офис</option>
+          <option value="hybrid">Гибрид</option>
+          <option value="remote">Удалённо</option>
+        </select>
+        <input name="city" placeholder="Город" />
+        <div class="form__actions">
+          <button class="btn btn--primary" type="submit">Сохранить</button>
+          <button class="btn btn--ghost" type="button" id="cancel-vacancy">Отмена</button>
+        </div>
+      </form>
+      <div id="vacancies-list" class="cards"></div>
+    </section>
+
+    <!-- Подбор (обратная механика) -->
+    <section id="matches" class="tab-section hidden">
+      <div class="section-head">
+        <h1>Подбор кандидатов</h1>
+      </div>
+      <p class="hint">Выберите вакансию — система покажет релевантных кандидатов по подтверждаемому профилю.</p>
+      <select id="match-vacancy" class="select-wide"></select>
+      <div id="matches-list" class="cards"></div>
+    </section>
+
+    <!-- Офферы -->
+    <section id="offers" class="tab-section hidden">
+      <div class="section-head">
+        <h1>Офферы</h1>
+      </div>
+      <p class="hint">Работодатель выходит на кандидата с вакансией и зарплатой.</p>
+      <div id="offers-list" class="cards"></div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">Прототип MVP · Отраслевой агрегатор ИТ-вакансий · Достижения ФСП</div>
+  </footer>
+
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

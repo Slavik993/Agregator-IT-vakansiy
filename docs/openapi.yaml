@@ -1,0 +1,600 @@
+openapi: 3.0.3
+info:
+  title: Агрегатор ИТ-вакансий (ФСП) API
+  description: |
+    Цифровая платформа-агрегатор ИТ-вакансий с обратной механикой подбора.
+    Соискатели категоризируются по итогам опроса и тестирования; работодатель
+    находит нужную категорию и выходит на конкретного кандидата с оффером.
+  version: 0.1.0
+  license:
+    name: MIT
+servers:
+  - url: /api
+paths:
+  /health:
+    get:
+      summary: Проверка доступности сервиса
+      operationId: health
+      responses:
+        '200':
+          description: Сервис доступен
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: ok }
+                  time: { type: string, format: date-time }
+
+  /fsp/disciplines:
+    get:
+      summary: Список дисциплин ФСП
+      operationId: getDisciplines
+      responses:
+        '200':
+          description: Список дисциплин
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    code: { type: string }
+                    name: { type: string }
+
+  /fsp/achievements/{fspId}:
+    get:
+      summary: Достижения участника ФСП
+      operationId: getAchievements
+      parameters:
+        - name: fspId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Достижения участника (пустой массив, если истории нет)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Achievement'
+
+  /candidates:
+    get:
+      summary: Список кандидатов с достижениями
+      operationId: listCandidates
+      responses:
+        '200':
+          description: Кандидаты
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Candidate'
+    post:
+      summary: Создание кандидата
+      operationId: createCandidate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CandidateInput'
+      responses:
+        '201':
+          description: Созданный кандидат
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Candidate'
+        '400':
+          description: Неверный запрос (обязательные поля отсутствуют)
+
+  /candidates/search:
+    get:
+      summary: Поиск по банку кандидатов с фильтрами и ранжированием
+      operationId: searchCandidates
+      parameters:
+        - name: role
+          in: query
+          required: false
+          schema: { type: string }
+        - name: grade
+          in: query
+          required: false
+          schema: { type: string }
+        - name: stack
+          in: query
+          required: false
+          schema: { type: string }
+        - name: work_format
+          in: query
+          required: false
+          schema: { type: string }
+        - name: city
+          in: query
+          required: false
+          schema: { type: string }
+        - name: fsp_only
+          in: query
+          required: false
+          schema: { type: boolean }
+      responses:
+        '200':
+          description: Результаты поиска
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total: { type: integer }
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        candidate:
+                          $ref: '#/components/schemas/Candidate'
+                        category:
+                          $ref: '#/components/schemas/CategoryResult'
+                        rank:
+                          type: object
+                          properties:
+                            rank: { type: integer }
+                            testSignal: { type: integer }
+                            fspSignal: { type: integer }
+
+  /candidates/{id}/category:
+    get:
+      summary: Категоризация кандидата
+      operationId: getCandidateCategory
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Категория кандидата
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  candidate:
+                    $ref: '#/components/schemas/Candidate'
+                  category:
+                    $ref: '#/components/schemas/CategoryResult'
+        '404':
+          description: Кандидат не найден
+
+  /candidates/{id}/tests:
+    post:
+      summary: Создать тест для кандидата
+      operationId: startTest
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role, claimed_grade]
+              properties:
+                role: { type: string, example: backend }
+                claimed_grade: { type: string, example: middle }
+      responses:
+        '201':
+          description: Тест создан (вопросы без корректных индексов)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestStarted'
+        '404':
+          description: Кандидат не найден
+    get:
+      summary: История тестов кандидата
+      operationId: candidateTests
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Список попыток
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AttemptShort'
+
+  /test-attempts/{id}/submit:
+    post:
+      summary: Отправить ответы и получить результат теста
+      operationId: submitTest
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [answers]
+              properties:
+                answers:
+                  type: object
+                  additionalProperties:
+                    type: integer
+                  example: { "b-m-1#1": 0 }
+      responses:
+        '200':
+          description: Результат теста
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestResult'
+        '404':
+          description: Попытка не найдена
+        '409':
+          description: Попытка уже отправлена
+
+  /candidates/{id}/grade-change-status:
+    get:
+      summary: Доступность смены грейда (cooldown)
+      operationId: gradeChangeStatus
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Статус смены грейда
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  allowed: { type: boolean }
+                  cooldown_days: { type: integer, example: 90 }
+                  last_grade_change: { type: string, format: date-time, nullable: true }
+                  next_allowed: { type: string, format: date-time, nullable: true }
+
+  /testing/meta:
+    get:
+      summary: Справочники для формы теста
+      operationId: testingMeta
+      responses:
+        '200':
+          description: Роли, грейды, cooldown
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  roles:
+                    type: array
+                    items: { type: string }
+                  grades:
+                    type: array
+                    items: { type: string }
+                  cooldownDays: { type: integer }
+
+  /vacancies:
+    get:
+      summary: Список активных вакансий
+      operationId: listVacancies
+      responses:
+        '200':
+          description: Вакансии
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Vacancy'
+    post:
+      summary: Создание вакансии
+      operationId: createVacancy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VacancyInput'
+      responses:
+        '201':
+          description: Созданная вакансия
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vacancy'
+        '400':
+          description: Неверный запрос
+
+  /vacancies/{id}/matches:
+    get:
+      summary: Подбор кандидатов под вакансию
+      operationId: getMatches
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Подборка кандидатов со скорингом
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  vacancy:
+                    $ref: '#/components/schemas/Vacancy'
+                  matches:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        candidate:
+                          $ref: '#/components/schemas/Candidate'
+                        category:
+                          $ref: '#/components/schemas/CategoryResult'
+                        score: { type: integer, example: 95 }
+                        breakdown:
+                          type: object
+                          properties:
+                            stack: { type: integer }
+                            grade: { type: integer }
+                            role: { type: integer }
+                            fsp: { type: integer }
+        '404':
+          description: Вакансия не найдена
+
+  /offers:
+    get:
+      summary: Список офферов
+      operationId: listOffers
+      responses:
+        '200':
+          description: Офферы
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Offer'
+    post:
+      summary: Создание оффера (работодатель → кандидат)
+      operationId: createOffer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [vacancy_id, candidate_id]
+              properties:
+                vacancy_id: { type: integer }
+                candidate_id: { type: integer }
+                salary_offer: { type: integer, minimum: 0, nullable: true }
+                message: { type: string, nullable: true }
+      responses:
+        '201':
+          description: Созданный оффер
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Offer'
+        '409':
+          description: Оффер для пары «вакансия-кандидат» уже существует
+
+  /offers/{id}:
+    patch:
+      summary: Смена статуса оффера
+      operationId: updateOffer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [pending, accepted, declined]
+      responses:
+        '200':
+          description: Обновлённый оффер
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Offer'
+        '400':
+          description: Недопустимый статус
+        '404':
+          description: Оффер не найден
+
+components:
+  schemas:
+    Achievement:
+      type: object
+      properties:
+        discipline: { type: string }
+        competition: { type: string }
+        result: { type: string, nullable: true }
+        role: { type: string, nullable: true }
+        rank: { type: string, nullable: true }
+        year: { type: integer, nullable: true }
+    Candidate:
+      type: object
+      properties:
+        id: { type: integer }
+        fsp_id: { type: string, nullable: true }
+        full_name: { type: string }
+        email: { type: string, nullable: true }
+        telegram: { type: string, nullable: true }
+        stack: { type: string }
+        grade: { type: string }
+        verified_grade: { type: string, nullable: true }
+        role: { type: string }
+        experience_years: { type: integer }
+        work_format: { type: string }
+        city: { type: string, nullable: true }
+        achievements:
+          type: array
+          items:
+            $ref: '#/components/schemas/Achievement'
+    CandidateInput:
+      type: object
+      required: [full_name, stack, grade, role]
+      properties:
+        fsp_id: { type: string, nullable: true }
+        full_name: { type: string }
+        email: { type: string, nullable: true }
+        telegram: { type: string, nullable: true }
+        stack: { type: string }
+        grade: { type: string }
+        role: { type: string }
+        experience_years: { type: integer, default: 0 }
+        work_format: { type: string, default: office }
+        city: { type: string, nullable: true }
+    CategoryResult:
+      type: object
+      properties:
+        category:
+          type: object
+          properties:
+            stack:
+              type: array
+              items: { type: string }
+            grade: { type: string }
+            role: { type: string }
+            work_format: { type: string }
+            city: { type: string, nullable: true }
+        verified: { type: boolean }
+        achievementsCount: { type: integer }
+        gradeBoosted: { type: boolean }
+    TestQuestion:
+      type: object
+      properties:
+        id: { type: string }
+        text: { type: string }
+        options:
+          type: array
+          items: { type: string }
+        weight: { type: integer }
+    TestStarted:
+      type: object
+      properties:
+        attempt_id: { type: integer }
+        candidate_id: { type: integer }
+        role: { type: string }
+        claimed_grade: { type: string }
+        status: { type: string }
+        questions:
+          type: array
+          items:
+            $ref: '#/components/schemas/TestQuestion'
+    AttemptShort:
+      type: object
+      properties:
+        id: { type: integer }
+        role: { type: string }
+        claimed_grade: { type: string }
+        status: { type: string }
+        percent: { type: integer, nullable: true }
+        result: { type: string, nullable: true }
+        grade_after: { type: string, nullable: true }
+        created_at: { type: string }
+        completed_at: { type: string, nullable: true }
+    TestResult:
+      type: object
+      properties:
+        attempt:
+          $ref: '#/components/schemas/AttemptShort'
+        result:
+          type: string
+          enum: [confident, passed, not_passed]
+        percent: { type: integer }
+        score: { type: integer }
+        max_score: { type: integer }
+        grade_after: { type: string }
+        grade_changed: { type: boolean }
+        cooldown_blocked: { type: boolean }
+        cooldown_days: { type: integer }
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              correct: { type: boolean }
+              given: { type: integer, nullable: true }
+              correctIndex: { type: integer }
+    Vacancy:
+      type: object
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        company: { type: string }
+        description: { type: string }
+        stack: { type: string }
+        grade: { type: string }
+        role: { type: string }
+        salary_from: { type: integer, nullable: true }
+        salary_to: { type: integer, nullable: true }
+        work_format: { type: string }
+        city: { type: string, nullable: true }
+        is_active: { type: integer }
+        created_at: { type: string }
+    VacancyInput:
+      type: object
+      required: [title, company, stack, grade, role]
+      properties:
+        title: { type: string }
+        company: { type: string }
+        description: { type: string }
+        stack: { type: string }
+        grade: { type: string }
+        role: { type: string }
+        salary_from: { type: integer, nullable: true }
+        salary_to: { type: integer, nullable: true }
+        work_format: { type: string, default: office }
+        city: { type: string, nullable: true }
+    Offer:
+      type: object
+      properties:
+        id: { type: integer }
+        vacancy_id: { type: integer }
+        candidate_id: { type: integer }
+        salary_offer: { type: integer, nullable: true }
+        message: { type: string, nullable: true }
+        status:
+          type: string
+          enum: [pending, accepted, declined]
+        created_at: { type: string }
+        vacancy_title: { type: string }
+        company: { type: string }
+        candidate_name: { type: string }
+        candidate_telegram: { type: string, nullable: true }

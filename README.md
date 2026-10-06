@@ -14,17 +14,21 @@
 | `server/` | Backend (Node.js + Express + SQLite) |
 | `server/services/fspMock.js` | Заглушка интеграции с API ФСП |
 | `server/matching.js` | Категоризация и rule-based матчинг |
+| `server/testing.js` | Движок тестирования кандидатов (банк заданий, генерация, оценка, cooldown) |
+| `server/validate.js` | Процедура валидации решения (синтетические данные, метрики) |
 | `public/` | Frontend (SPA на чистом HTML/CSS/JS) |
 | `src/` | Telegram-бот (Yandex Cloud Function, шаблон SourceCraft) |
 | `.sourcecraft/ci.yaml` | CI/CD для деплоя Telegram-бота |
 | `render.yaml` | Render Blueprint для деплоя веб-сервиса |
+| `Dockerfile`, `docker-compose.yml` | Контейнеризация веб-сервиса |
+| `docs/` | Сопроводительная документация (архитектура, API, тестирование, валидация, ФСП, развёртывание) |
 
 ## Технологический стек
 
 - **Backend:** Node.js ≥ 18, Express 4, better-sqlite3 (SQLite)
 - **Frontend:** статический SPA (HTML/CSS/JS), отдаётся тем же Express
 - **Telegram-бот:** Telegraf 4, разворачивается как Yandex Cloud Function через CI/CD SourceCraft
-- **Деплой веб-сервиса:** Render (Blueprint)
+- **Деплой веб-сервиса:** Render (Blueprint) или Docker
 
 ## Локальный запуск
 
@@ -36,52 +40,44 @@ npm start      # сервер на http://localhost:3000
 
 API будет доступно на `http://localhost:3000/api`, фронтенд — на `http://localhost:3000`.
 
-## Развёртывание веб-сервиса на Render
+## Валидация решения
 
-Репозиторий содержит `render.yaml` (Render Blueprint). Для развёртывания:
+```bash
+npm run validate
+```
+
+Скрипт генерирует синтетических кандидатов, прогоняет движок тестирования и матчинг,
+считает метрики (доля подтверждённых грейдов, монотонность, Precision@5, MRR, Coverage)
+и сохраняет отчёт в `data/validation-report.json`. Подробнее: `docs/validation.md`.
+
+## Развёртывание
+
+### Docker
+
+```bash
+docker compose up --build
+```
+
+### Render (Blueprint)
 
 1. Подключите репозиторий в [Render](https://render.com) (New → Blueprint).
-2. Render сам создаст веб-сервис из `render.yaml`:
+2. Render создаст веб-сервис из `render.yaml`:
    - команда сборки: `npm install`;
    - команда запуска: `npm run seed && npm start`;
    - health check: `/api/health`.
-3. После деплоя сервис будет доступен по публичному URL вида `https://<service>.onrender.com`.
 
-Для работы Telegram-бота укажите URL веб-сервиса в переменной окружения `WEB_API_URL`
-(например, `https://<service>.onrender.com`) при развёртывании функции бота.
+Для работы Telegram-бота укажите URL веб-сервиса в переменной окружения `WEB_API_URL`.
+
+Подробнее: `docs/deployment.md`.
 
 ## Развёртывание Telegram-бота (SourceCraft CI/CD + Yandex Cloud)
 
-Бот разворачивается по шаблону SourceCraft `template-tg-bot` как Yandex Cloud Function.
+1. Создайте сервисное подключение `default-service-connection` (Organization → Settings → Service Connections).
+2. Зарегистрируйте бота через [BotFather](https://t.me/BotFather) (`/newbot`).
+3. В CI/CD запустите workflow `deploy-tg-bot-workflow` с параметрами `bot-username` (без `_bot`) и `bot-token`.
+4. После деплоя в кубике `get-outputs` перейдите по `deployment_location` и включите «Публичная функция».
 
-### 1. Сервисное подключение
-
-В настройках организации SourceCraft создайте сервисное подключение
-(Organization → Settings → Service Connections) с именем **`default-service-connection`**
-(это имя ожидает `.sourcecraft/ci.yaml`).
-
-### 2. Регистрация бота
-
-1. В Telegram откройте [BotFather](https://t.me/BotFather) и отправьте `/newbot`.
-2. Задайте имя и username (username должен заканчиваться на `bot`, например `agregator_it_bot`).
-3. Сохраните полученный токен — он понадобится при запуске CI/CD.
-
-### 3. Запуск CI/CD
-
-1. Перейдите в раздел CI/CD репозитория и запустите новый процесс (`New Launch`).
-2. Выберите workflow `deploy-tg-bot-workflow`.
-3. Укажите параметры:
-   - `bot-username` — username бота **без** суффикса `_bot` (например `agregator_it`);
-   - `bot-token` — токен от BotFather.
-4. Дождитесь завершения процесса (статус «Успех»).
-
-### 4. Публикация функции
-
-После деплоя откройте кубик `get-outputs` в логах запуска и перейдите по ссылке
-`deployment_location` в консоль Yandex Cloud. Включите опцию **«Публичная функция»**
-(для автоматической публикации у сервисного аккаунта должна быть роль `functions.admin`).
-
-Готово — бот отвечает на команды:
+Команды бота:
 
 - `/achievements <ID ФСП>` — проверка подтверждённых достижений участника;
 - `/vacancies` — список актуальных вакансий;
@@ -89,7 +85,7 @@ API будет доступно на `http://localhost:3000/api`, фронтен
 
 ## API
 
-Базовый URL: `/api`
+Базовый URL: `/api`. Полное описание — в `docs/api.md`, машинная спецификация — `docs/openapi.yaml`.
 
 ### Health
 
@@ -111,23 +107,20 @@ API будет доступно на `http://localhost:3000/api`, фронтен
 | GET | `/api/candidates` | Список кандидатов с достижениями |
 | POST | `/api/candidates` | Создание кандидата |
 | GET | `/api/candidates/:id/category` | Автоматическая категоризация кандидата |
+| GET | `/api/candidates/search` | Поиск по банку: фильтры role/grade/stack/work_format/city/fsp_only |
+| GET | `/api/candidates/:id/tests` | История тестов кандидата |
+| GET | `/api/candidates/:id/grade-change-status` | Доступность смены грейда (cooldown 90 дней) |
 
-Пример создания кандидата:
+### Тестирование
 
-```json
-{
-  "fsp_id": "FSP-0001",
-  "full_name": "Иван Петров",
-  "email": "ivan@example.com",
-  "telegram": "@ivan_p",
-  "stack": "python,go",
-  "grade": "middle",
-  "role": "backend",
-  "experience_years": 3,
-  "work_format": "hybrid",
-  "city": "Москва"
-}
-```
+| Метод | Путь | Описание |
+| --- | --- | --- |
+| GET | `/api/testing/meta` | Справочники ролей, грейдов, cooldown |
+| POST | `/api/candidates/:id/tests` | Создать тест (случайная выборка + параметрические задания) |
+| POST | `/api/test-attempts/:id/submit` | Отправить ответы и получить результат |
+
+Результат: `confident` (≥85%) — грейд может быть повышен; `passed` (55–84%) — подтверждён;
+`not_passed` (<55%) — грейд не понижается, можно пройти уровень ниже.
 
 ### Вакансии и матчинг
 
@@ -147,7 +140,8 @@ API будет доступно на `http://localhost:3000/api`, фронтен
 
 ## Матчинг (правила)
 
-Категоризация кандидата: стек нормализуется, грейд может быть повышен при наличии
+Категоризация кандидата: стек нормализуется, грейд определяется подтверждённым тестом
+(`verified_grade`), при его отсутствии — заявленным; грейд может быть повышен при наличии
 подтверждённых достижений ФСП (`junior` → `middle` при ≥1 достижении, `middle` → `senior` при ≥2).
 
 Скоринг кандидата под вакансию (0–100):
@@ -157,9 +151,31 @@ API будет доступно на `http://localhost:3000/api`, фронтен
 - совпадение роли — 10 баллов;
 - подтверждённые достижения ФСП — 5 баллов.
 
+Каждый результат подборки содержит `breakdown` — разбивку баллов по компонентам
+для объяснимости выдачи. Поиск по банку (`/api/candidates/search`) поддерживает
+фильтры по специализации, грейду, стеку, формату работы, городу и наличию
+достижений ФСП; результаты ранжируются по силе подтверждённого профиля
+(`rank` = тестовый сигнал до 70 + ФСП-сигнал до 30).
+
+## Документация
+
+| Документ | Содержание |
+| --- | --- |
+| `docs/architecture.md` | Функциональная и компонентная архитектура |
+| `docs/testing.md` | Механика тестирования и устойчивость к распространению заданий |
+| `docs/matching.md` | Механика подбора и категоризация кандидатов |
+| `docs/validation.md` | Процедура валидации решения и метрики |
+| `docs/fsp-integration.md` | Схема интеграции с реестром ФСП (Keycloak) |
+| `docs/api.md` | Описание API |
+| `docs/openapi.yaml` | Спецификация OpenAPI 3.0 |
+| `docs/privacy.md` | Приватность, согласия, 152-ФЗ |
+| `docs/roadmap.md` | Дорожная карта и дополнительный функционал |
+| `docs/deployment.md` | Сборка, развёртывание, локальный запуск |
+
 ## Дальнейшее развитие
 
 - подключение реального API ФСП вместо `server/services/fspMock.js` (контракт методов сохранён);
-- замена rule-based матчинга на ML-модель (рекомендации кандидатов);
-- полноценная аутентификация работодателей и соискателей;
-- личный кабинет кандидата с автоматическим обогащением достижениями ФСП.
+- ролевые личные кабинеты, регистрация по email, приватность контактов;
+- PDF-профиль и автораспознавание резюме;
+- отклики кандидатов, регулярные короткие задания, защита от фиктивных вакансий;
+- замена rule-based матчинга на ML-модель (рекомендации кандидатов).

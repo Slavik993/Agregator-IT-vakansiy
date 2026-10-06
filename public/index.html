@@ -12,6 +12,7 @@
       <a href="/" class="logo">IT<span>Агрегатор</span></a>
       <nav class="nav">
         <a href="#candidates" data-tab="candidates">Кандидаты</a>
+        <a href="#testing" data-tab="testing">Тестирование</a>
         <a href="#vacancies" data-tab="vacancies">Вакансии</a>
         <a href="#matches" data-tab="matches">Подбор</a>
         <a href="#offers" data-tab="offers">Офферы</a>
@@ -62,6 +63,24 @@
         </div>
       </form>
       <div id="candidates-list" class="cards"></div>
+    </section>
+
+    <!-- Тестирование кандидатов -->
+    <section id="testing" class="tab-section hidden">
+      <div class="section-head">
+        <h1>Тестирование кандидата</h1>
+      </div>
+      <p class="hint">Тест собирается случайной выборкой заданий и уникальными параметрами для каждого кандидата. Результат определяет категорию и грейд.</p>
+      <div class="testing-panel">
+        <label class="field-label">Кандидат</label>
+        <select id="test-candidate" class="select-wide"></select>
+        <label class="field-label">Специализация</label>
+        <select id="test-role" class="select-wide"></select>
+        <label class="field-label">Заявляемый грейд</label>
+        <select id="test-grade" class="select-wide"></select>
+        <button class="btn btn--primary" id="btn-start-test">Начать тест</button>
+      </div>
+      <div id="test-container"></div>
     </section>
 
     <!-- Вакансии -->

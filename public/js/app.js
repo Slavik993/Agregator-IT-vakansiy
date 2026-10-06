@@ -31,6 +31,10 @@ document.querySelectorAll('.nav a').forEach((link) => {
     link.classList.add('active');
     if (tab === 'matches') loadMatchSelector();
     if (tab === 'offers') loadOffers();
+    if (tab === 'testing') {
+      fillTestCandidateSelect();
+      if (!testingMeta) loadTestingMeta();
+    }
   });
 });
 
@@ -171,6 +175,98 @@ async function createOffer(candidateId) {
   }
 }
 
+// ---- Тестирование кандидатов ----
+
+let testingMeta = null;
+let currentTest = null;
+
+async function loadTestingMeta() {
+  testingMeta = await api.getTestingMeta();
+  const roleSelect = $('#test-role');
+  roleSelect.innerHTML = testingMeta.roles.map((r) => `<option value="${r}">${esc(r)}</option>`).join('');
+  const gradeSelect = $('#test-grade');
+  gradeSelect.innerHTML = testingMeta.grades.map((g) => `<option value="${g}">${esc(g)}</option>`).join('');
+}
+
+function fillTestCandidateSelect() {
+  const select = $('#test-candidate');
+  select.innerHTML = state.candidates.map((c) => `<option value="${c.id}">${esc(c.full_name)} (${esc(c.grade)} · ${esc(c.role)})</option>`).join('');
+}
+
+function renderTestResult(data) {
+  const container = $('#test-container');
+  const statusText = {
+    confident: 'Уверенное прохождение — грейд может быть повышен',
+    passed: 'Грейд подтверждён',
+    not_passed: 'Грейд не подтверждён (можно попробовать уровень ниже)',
+  }[data.result] || data.result;
+
+  const details = (data.details || []).map((d) => `
+    <li class="${d.correct ? 'ok' : 'bad'}">
+      <strong>${d.correct ? '✓' : '✗'}</strong> Вопрос #${d.id.split('#')[1]} —
+      ${d.correct ? 'верно' : 'неверно'}${!d.correct && d.explanation ? `: ${esc(d.explanation)}` : ''}
+    </li>`).join('');
+
+  container.innerHTML = `
+    <div class="card test-result">
+      <div class="card__title">Результат: ${esc(statusText)}</div>
+      <div class="card__sub">Баллы: ${data.score} / ${data.max_score} · ${data.percent}%</div>
+      <div class="card__sub">Грейд после теста: <strong>${esc(data.grade_after)}</strong></div>
+      ${data.grade_changed ? '<div class="badge">Грейд изменён</div>' : ''}
+      ${data.cooldown_blocked ? `<div class="badge">Смена грейда доступна не чаще раза в ${data.cooldown_days} дней</div>` : ''}
+      <details class="achievements"><summary>Разбор ответов</summary><ul>${details}</ul></details>
+    </div>`;
+}
+
+async function startTest() {
+  const candidateId = Number($('#test-candidate').value);
+  const role = $('#test-role').value;
+  const grade = $('#test-grade').value;
+  if (!candidateId || !role || !grade) return;
+
+  try {
+    currentTest = await api.startTest(candidateId, { role, claimed_grade: grade });
+    const container = $('#test-container');
+    container.innerHTML = `
+      <div class="card test-form">
+        <div class="card__title">Тест: ${esc(currentTest.role)} · ${esc(currentTest.claimed_grade)}</div>
+        ${currentTest.questions.map((q, i) => `
+          <div class="test-question">
+            <div class="test-question__text">${i + 1}. ${esc(q.text)}</div>
+            ${q.options.map((opt, oi) => `
+              <label class="test-option">
+                <input type="radio" name="q_${q.id}" value="${oi}" />
+                <span>${esc(opt)}</span>
+              </label>`).join('')}
+          </div>`).join('')}
+        <div class="form__actions">
+          <button class="btn btn--primary" id="btn-submit-test">Отправить ответы</button>
+          <button class="btn btn--ghost" id="btn-cancel-test">Отмена</button>
+        </div>
+      </div>`;
+    container.querySelector('#btn-cancel-test').addEventListener('click', () => {
+      container.innerHTML = '';
+      currentTest = null;
+    });
+    container.querySelector('#btn-submit-test').addEventListener('click', async () => {
+      const answers = {};
+      container.querySelectorAll('input[type="radio"]:checked').forEach((input) => {
+        const name = input.name.slice(2); // убираем префикс 'q_'
+        answers[name] = Number(input.value);
+      });
+      try {
+        const data = await api.submitTest(currentTest.attempt_id, answers);
+        renderTestResult(data);
+        currentTest = null;
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
 // ---- События ----
 
 $('#btn-add-candidate').addEventListener('click', () => $('#candidate-form').classList.toggle('hidden'));
@@ -248,6 +344,8 @@ $('#offers-list').addEventListener('click', async (e) => {
   }
 });
 
+$('#btn-start-test').addEventListener('click', startTest);
+
 // ---- Инициализация ----
 
 (async function init() {
@@ -257,6 +355,7 @@ $('#offers-list').addEventListener('click', async (e) => {
     state.vacancies = vacancies;
     renderCandidates();
     renderVacancies();
+    loadTestingMeta().catch(() => {});
   } catch (err) {
     alert('Не удалось загрузить данные: ' + err.message);
   }

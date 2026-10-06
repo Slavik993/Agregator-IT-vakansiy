@@ -65,6 +65,32 @@ CREATE TABLE IF NOT EXISTS achievements (
   year INTEGER,
   source TEXT NOT NULL DEFAULT 'fsp'
 );
+
+CREATE TABLE IF NOT EXISTS test_attempts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  candidate_id INTEGER NOT NULL REFERENCES candidates(id),
+  role TEXT NOT NULL,
+  claimed_grade TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'in_progress',
+  questions TEXT NOT NULL,
+  answers TEXT,
+  score INTEGER,
+  max_score INTEGER,
+  percent INTEGER,
+  result TEXT,
+  grade_after TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  completed_at TEXT
+);
 `);
+
+// Лёгкие миграции для колонок, которых нет в старых базах
+const candidateCols = db.prepare('PRAGMA table_info(candidates)').all().map((c) => c.name);
+if (!candidateCols.includes('verified_grade')) {
+  db.exec('ALTER TABLE candidates ADD COLUMN verified_grade TEXT');
+}
+if (!candidateCols.includes('last_grade_change')) {
+  db.exec('ALTER TABLE candidates ADD COLUMN last_grade_change TEXT');
+}
 
 module.exports = db;

@@ -12,7 +12,7 @@ const MOCK_DISCIPLINES = [
 
 // Ключ fsp_id -> достижения участника
 const MOCK_ACHIEVEMENTS = {
-  FSP-0001: [
+  'FSP-0001': [
     {
       discipline: 'algorithm',
       competition: 'Кубок ФСП по спортивному программированию',

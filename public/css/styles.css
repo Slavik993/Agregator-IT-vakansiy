@@ -305,3 +305,64 @@ h1 {
   border: 1px dashed var(--border);
   border-radius: var(--radius);
 }
+
+/* Testing */
+.testing-panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  display: grid;
+  gap: 12px;
+  margin-bottom: 24px;
+  max-width: 560px;
+}
+
+.field-label {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.test-form,
+.test-result {
+  max-width: 720px;
+}
+
+.test-question {
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+  margin-top: 14px;
+}
+
+.test-question__text {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.test-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.test-option input {
+  accent-color: var(--accent);
+}
+
+.test-result ul {
+  list-style: none;
+  margin-top: 8px;
+  display: grid;
+  gap: 6px;
+}
+
+.test-result li.ok {
+  color: var(--accent-2);
+}
+
+.test-result li.bad {
+  color: var(--text);
+}

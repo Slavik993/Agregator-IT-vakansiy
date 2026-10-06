@@ -61,7 +61,7 @@
         </form>
 
         <div id="verify-form" class="form hidden">
-          <p class="hint">Введите код подтверждения из письма (в MVP — см. консоль сервера).</p>
+          <p class="hint" id="verify-hint">Введите код подтверждения из письма.</p>
           <label>Email
             <input id="verify-email" type="email" required />
           </label>
@@ -70,7 +70,12 @@
           </label>
           <div class="form__actions">
             <button class="btn btn--primary" id="btn-verify" type="button">Подтвердить</button>
+            <button class="btn btn--ghost" id="btn-resend" type="button">Прислать код заново</button>
           </div>
+          <p class="hint small">
+            В этой сборке код возвращается в UI (см. блок выше), потому что на Render и аналогичных
+            хостингах вы не видите серверную консоль. В продакшене код отправляется на e-mail через SMTP.
+          </p>
         </div>
       </div>
     </section>

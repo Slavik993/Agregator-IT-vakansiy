@@ -232,6 +232,37 @@ paths:
         '400':
           description: Invalid / expired code
 
+  /api/auth/resend-code:
+    post:
+      tags: [auth]
+      security: []
+      summary: Перевыпустить код подтверждения
+      description: |
+        В MVP код возвращается в ответе (`dev_verification_code`), чтобы пользователь
+        видел его без доступа к серверной консоли (например, на Render).
+        В продакшене код отправляется на e-mail.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  already_verified: { type: boolean }
+                  dev_verification_code: { type: string, description: 'только в MVP' }
+        '404': { description: User not found }
+
   /api/auth/login:
     post:
       tags: [auth]

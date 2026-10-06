@@ -40,6 +40,7 @@ const api = (() => {
     login: (payload) => request('POST', '/api/auth/login', payload),
     logout: () => request('POST', '/api/auth/logout', {}),
     verifyEmail: (email, code) => request('POST', '/api/auth/verify-email', { email, code }),
+    resendCode: (email) => request('POST', '/api/auth/resend-code', { email }),
     me: () => request('GET', '/api/me'),
 
     // ---- profile ----

@@ -126,6 +126,30 @@ function register({ email, password, role, displayName }) {
 
 // ---- Подтверждение email ----
 
+// Генерирует и сохраняет новый код. Возвращает его в ответе —
+// в MVP мы не отправляем реальный e-mail, поэтому код виден пользователю на UI.
+// В проде функция должна вернуть только {ok: true}, без dev_verification_code.
+function resendCode(email) {
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  const user = db.prepare('SELECT id, email_verified FROM users WHERE email = ?').get(normalizedEmail);
+  if (!user) {
+    const err = new Error('User not found');
+    err.status = 404;
+    throw err;
+  }
+  if (user.email_verified) {
+    return { ok: true, already_verified: true };
+  }
+  const code = generateVerificationCode();
+  const expires = new Date(Date.now() + VERIFICATION_CODE_TTL_MIN * 60 * 1000).toISOString();
+  db.prepare(
+    `UPDATE users SET verification_code = ?, verification_expires_at = ? WHERE id = ?`
+  ).run(code, expires, user.id);
+  emailService.sendVerificationCode(normalizedEmail, code);
+  audit(user.id, 'resend_verification', 'user', user.id);
+  return { ok: true, dev_verification_code: code };
+}
+
 function verifyEmail(email, code) {
   const normalizedEmail = String(email).trim().toLowerCase();
   const user = db.prepare('SELECT * FROM users WHERE email = ?').get(normalizedEmail);
@@ -254,6 +278,7 @@ function me(userId) {
 module.exports = {
   register,
   verifyEmail,
+  resendCode,
   login,
   logout,
   me,

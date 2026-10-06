@@ -21,8 +21,16 @@
 | --- | --- | --- | --- |
 | POST | `/api/auth/register` | `{email, password, role, displayName}` | `{user_id, email, role, email_verified, dev_verification_code}` |
 | POST | `/api/auth/verify-email` | `{email, code}` | `{ok: true}` |
+| POST | `/api/auth/resend-code` | `{email}` | `{ok: true, dev_verification_code}` |
 | POST | `/api/auth/login` | `{email, password}` | `{token, user}` |
 | POST | `/api/auth/logout` | — | `{ok: true}` |
+
+> **MVP-режим.** В этой сборке код подтверждения возвращается в JSON-ответе
+> (`dev_verification_code`) и показывается прямо в UI — на Render (и любых
+> хостингах без SSH) пользователь не видит серверную консоль, поэтому код виден
+> только в ответе API. В продакшене поле `dev_verification_code` убирается, а
+> код отправляется реальным письмом через `server/email.js` (контракт уже
+> поддерживает SMTP-провайдер).
 
 ### Кандидаты (публичные)
 

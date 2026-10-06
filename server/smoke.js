@@ -94,7 +94,14 @@ async function waitForServer(maxMs = 10000) {
       displayName: 'Smoke Кандидат',
     });
     assert(candReg.status === 201, 'register candidate 201');
+    assert(typeof candReg.body.dev_verification_code === 'string', 'verification code returned in response');
     const candUserId = candReg.body.user_id;
+
+    console.log('[smoke] Повторная отправка кода подтверждения...');
+    const resend = await request('POST', '/api/auth/resend-code', { email: candReg.body.email });
+    assert(resend.status === 200, 'resend code 200');
+    assert(/^\d{6}$/.test(resend.body.dev_verification_code), 'resend returns 6-digit code');
+    assert(resend.body.dev_verification_code !== candReg.body.dev_verification_code, 'resend generates fresh code');
 
     const candLogin = await request('POST', '/api/auth/login', {
       email: `smoke-cand-${(candUserId)}@example.local`.replace(candReg.body.user_id, ''),

@@ -148,6 +148,14 @@ app.post('/api/auth/verify-email', (req, res) => {
   }
 });
 
+app.post('/api/auth/resend-code', (req, res) => {
+  try {
+    res.json(auth.resendCode(req.body?.email));
+  } catch (e) {
+    res.status(e.status || 500).json({ error: e.message });
+  }
+});
+
 app.post('/api/auth/login', (req, res) => {
   try {
     res.json(auth.login(req.body?.email, req.body?.password));

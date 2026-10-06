@@ -78,10 +78,25 @@ npm start      # сервер на http://localhost:3000
 
 API доступно на `http://localhost:3000/api`, фронтенд — на `http://localhost:3000`.
 
+### Подтверждение email на Render и других хостингах
+
+В этой сборке код подтверждения возвращается прямо в JSON-ответе API
+(`dev_verification_code`) и отображается в UI на экране ввода кода. Это
+нужно потому, что на Render/Cloud Run/Heroku пользователь не имеет
+доступа к серверной консоли, где раньше код просто печатался.
+
+Кнопка **«Прислать код заново»** вызывает `POST /api/auth/resend-code`,
+который генерирует свежий код и возвращает его в ответе. После
+подтверждения `localStorage` очищается.
+
+Для продакшена поле `dev_verification_code` убирается из ответов, а код
+отправляется реальным письмом (контракт `server/email.js` готов к
+подключению SMTP/SES/Mailgun).
+
 ## Smoke и валидация
 
 ```bash
-npm run smoke      # 24-проверочный e2e smoke
+npm run smoke      # 28-проверочный e2e smoke
 npm run validate   # синтетическая валидация → data/validation-report.json
 ```
 

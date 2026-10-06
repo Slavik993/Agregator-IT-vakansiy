@@ -1,19 +1,23 @@
 {
   "name": "agregator-it-vakansiy",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Отраслевой агрегатор ИТ-вакансий с обратной механикой подбора и подтверждаемыми достижениями ФСП",
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
     "seed": "node server/seed.js",
-    "validate": "node server/validate.js"
+    "validate": "node server/validate.js",
+    "smoke": "node server/smoke.js"
   },
   "engines": {
     "node": ">=18"
   },
   "dependencies": {
+    "bcryptjs": "^2.4.3",
     "better-sqlite3": "^11.3.0",
-    "express": "^4.19.2"
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "pdfkit": "^0.15.0"
   },
   "license": "MIT"
 }

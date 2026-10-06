@@ -1,86 +1,85 @@
-# Сборка, развёртывание и локальный запуск
+# Развёртывание
 
-## 1. Требования
-
-- Node.js ≥ 18 (рекомендуется 22)
-- npm
-- (опционально) Docker / Docker Compose
-
-## 2. Локальный запуск
+## 1. Локальный запуск
 
 ```bash
 npm install
-npm run seed   # наполнение БД демо-данными (идемпотентно)
-npm start      # сервер на http://localhost:3000
+npm run seed          # идемпотентно: создаёт demo-аккаунты и вакансии
+npm start             # http://localhost:3000
+npm run smoke         # 24-проверочный e2e smoke
+npm run validate      # синтетическая валидация
 ```
 
-Проверка:
+Демо-аккаунты:
 
-```bash
-curl http://localhost:3000/api/health
-```
+| Email | Пароль | Роль |
+|---|---|---|
+| `candidate@demo.local` | `demo1234` | candidate |
+| `employer@demo.local` | `demo1234` | employer |
+| `admin@local` | `admin1234` | admin (модерика) |
 
-Фронтенд доступен на `http://localhost:3000`.
-
-## 3. Валидация решения
-
-```bash
-npm run validate
-```
-
-Скрипт генерирует синтетических кандидатов, прогоняет движок тестирования,
-формирует подборки и сохраняет отчёт в `data/validation-report.json`.
-Подробнее: `docs/validation.md`.
-
-## 4. Docker
+## 2. Docker
 
 ```bash
 docker compose up --build
 ```
 
-Сервис будет доступен на `http://localhost:3000`. Данные SQLite сохраняются
-в Docker volume `app-data`.
+`docker-compose.yml`:
 
-Альтернативно:
+```yaml
+services:
+  web:
+    build: .
+    ports: ["3000:3000"]
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+    volumes:
+      - app-data:/app/data
 
-```bash
-docker build -t agregator-it-vakansiy .
-docker run -p 3000:3000 -v agregator-data:/app/data agregator-it-vakansiy
+volumes:
+  app-data:
 ```
 
-## 5. Развёртывание на Render
+## 3. Render (Blueprint)
 
-Репозиторий содержит `render.yaml` (Render Blueprint):
+`render.yaml` поднимает веб-сервис:
+
+- build: `npm install`
+- start: `npm run seed && npm start`
+- healthcheck: `/api/health`
+
+Шаги:
 
 1. Подключите репозиторий в Render (New → Blueprint).
-2. Render создаст веб-сервис:
-   - build: `npm install`;
-   - start: `npm run seed && npm start`;
-   - health check: `/api/health`.
-3. Сервис будет доступен по публичному URL `https://<service>.onrender.com`.
+2. Render создаст веб-сервис и Postgres-volume для `/app/data` (через диск).
+4. Установите `JWT_SECRET` в environment (Render Dashboard → Environment).
 
-Переменные окружения:
+## 4. Переменные окружения
 
-| Переменная | Назначение |
-| --- | --- |
-| `PORT` | Порт (Render задаёт 10000) |
-| `NODE_ENV` | `production` |
-| `WEB_API_URL` | URL веб-сервиса для Telegram-бота |
-
-## 6. Развёртывание Telegram-бота (SourceCraft CI/CD + Yandex Cloud)
-
-1. Создайте сервисное подключение в SourceCraft с именем `default-service-connection`.
-2. Зарегистрируйте бота через BotFather (username вида `agregator_it_bot`).
-3. В CI/CD запустите workflow `deploy-tg-bot-workflow` с параметрами
-   `bot-username` (без `_bot`) и `bot-token`.
-4. После завершения откройте кубик `get-outputs`, перейдите по `deployment_location`
-   и включите «Публичная функция».
-
-## 7. Переменные окружения
-
-| Переменная | По умолчанию | Описание |
+| Переменная | Назначение | По умолчанию |
 | --- | --- | --- |
-| `PORT` | `3000` | Порт HTTP-сервера |
-| `NODE_ENV` | — | Режим работы |
-| `WEB_API_URL` | `http://localhost:3000` | Базовый URL API для Telegram-бота |
-| `BOT_TOKEN` | — | Токен Telegram-бота (используется в Yandex Cloud Function) |
+| `PORT` | Порт HTTP-сервера | `3000` |
+| `JWT_SECRET` | Секрет подписи JWT | dev-secret ⚠️ |
+| `JWT_TTL` | Время жизни JWT | `7d` |
+| `FSP_API_URL` | URL реального API ФСП (после MVP) | — |
+| `FSP_CLIENT_ID` | Keycloak client id | — |
+| `FSP_CLIENT_SECRET` | Keycloak client secret | — |
+
+## 5. Подключение Telegram-бота
+
+`src/` содержит шаблон Yandex Cloud Function на Telegraf. CI/CD в
+`.sourcecraft/ci.yaml` деплоит функцию в Yandex Cloud; см. README → секция
+«Развёртывание Telegram-бота».
+
+## 6. Health-check
+
+```
+GET /api/health → 200 { status: "ok", time: "<ISO>" }
+```
+
+## 7. Резервное копирование
+
+В MVP данные хранятся в SQLite (`data/app.db`). Для прода — заменить на
+Postgres (через Prisma/TypeORM или вручную) или подключить Litestream для
+непрерывной репликации SQLite.

@@ -3,155 +3,261 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>IT-Агрегатор вакансий</title>
+  <title>Агрегатор ИТ-вакансий · MVP</title>
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
-  <header class="topbar">
+  <header class="topbar" id="topbar">
     <div class="container topbar__inner">
-      <a href="/" class="logo">IT<span>Агрегатор</span></a>
-      <nav class="nav">
-        <a href="#candidates" data-tab="candidates">Кандидаты</a>
-        <a href="#testing" data-tab="testing">Тестирование</a>
-        <a href="#vacancies" data-tab="vacancies">Вакансии</a>
-        <a href="#matches" data-tab="matches">Подбор</a>
-        <a href="#offers" data-tab="offers">Офферы</a>
-      </nav>
+      <a href="#" class="logo" id="logo">IT<span>Агрегатор</span></a>
+      <div class="topbar__user" id="topbar-user"></div>
     </div>
   </header>
 
-  <main class="container">
-    <!-- Кандидаты -->
-    <section id="candidates" class="tab-section">
-      <div class="section-head">
-        <h1>Соискатели</h1>
-        <button class="btn" id="btn-add-candidate">+ Добавить кандидата</button>
-      </div>
-      <form id="candidate-form" class="form hidden">
-        <input name="full_name" placeholder="ФИО *" required />
-        <input name="fsp_id" placeholder="ID участника ФСП (например, FSP-0001)" />
-        <input name="email" placeholder="Email" />
-        <input name="telegram" placeholder="Telegram" />
-        <input name="stack" placeholder="Стек через запятую: python,go *" required />
-        <select name="grade" required>
-          <option value="">Грейд *</option>
-          <option>junior</option>
-          <option>middle</option>
-          <option>senior</option>
-          <option>lead</option>
-        </select>
-        <select name="role" required>
-          <option value="">Роль *</option>
-          <option>backend</option>
-          <option>frontend</option>
-          <option>fullstack</option>
-          <option>ml</option>
-          <option>devops</option>
-          <option>robotics</option>
-          <option>qa</option>
-        </select>
-        <input name="experience_years" type="number" min="0" placeholder="Опыт, лет" />
-        <select name="work_format">
-          <option value="office">Офис</option>
-          <option value="hybrid">Гибрид</option>
-          <option value="remote">Удалённо</option>
-        </select>
-        <input name="city" placeholder="Город" />
-        <div class="form__actions">
-          <button class="btn btn--primary" type="submit">Сохранить</button>
-          <button class="btn btn--ghost" type="button" id="cancel-candidate">Отмена</button>
+  <main class="container" id="root">
+    <!-- Login / Register -->
+    <section id="auth-screen" class="screen">
+      <div class="auth-card">
+        <h1 class="auth-card__title">Войдите или зарегистрируйтесь</h1>
+        <p class="auth-card__sub">Демо-аккаунты: <code>candidate@demo.local / demo1234</code>, <code>employer@demo.local / demo1234</code>, <code>admin@local / admin1234</code>.</p>
+
+        <div class="auth-tabs">
+          <button class="auth-tab active" data-tab="login">Вход</button>
+          <button class="auth-tab" data-tab="register">Регистрация</button>
         </div>
-      </form>
-      <div id="candidates-list" class="cards"></div>
+
+        <form id="login-form" class="form">
+          <label>Email
+            <input name="email" type="email" required autocomplete="email" placeholder="candidate@demo.local" />
+          </label>
+          <label>Пароль
+            <input name="password" type="password" required autocomplete="current-password" placeholder="demo1234" />
+          </label>
+          <div class="form__actions">
+            <button class="btn btn--primary" type="submit">Войти</button>
+          </div>
+        </form>
+
+        <form id="register-form" class="form hidden">
+          <label>Email
+            <input name="email" type="email" required autocomplete="email" />
+          </label>
+          <label>Пароль (≥ 6 символов)
+            <input name="password" type="password" required minlength="6" autocomplete="new-password" />
+          </label>
+          <label>Имя / название
+            <input name="displayName" type="text" />
+          </label>
+          <label>Я регистрируюсь как
+            <select name="role" required>
+              <option value="candidate">Соискатель</option>
+              <option value="employer">Работодатель</option>
+            </select>
+          </label>
+          <div class="form__actions">
+            <button class="btn btn--primary" type="submit">Зарегистрироваться</button>
+          </div>
+          <p class="hint" id="register-hint">В MVP код подтверждения выводится в консоль сервера. В продакшене приходит на e-mail.</p>
+        </form>
+
+        <div id="verify-form" class="form hidden">
+          <p class="hint">Введите код подтверждения из письма (в MVP — см. консоль сервера).</p>
+          <label>Email
+            <input id="verify-email" type="email" required />
+          </label>
+          <label>Код
+            <input id="verify-code" type="text" required inputmode="numeric" />
+          </label>
+          <div class="form__actions">
+            <button class="btn btn--primary" id="btn-verify" type="button">Подтвердить</button>
+          </div>
+        </div>
+      </div>
     </section>
 
-    <!-- Тестирование кандидатов -->
-    <section id="testing" class="tab-section hidden">
-      <div class="section-head">
-        <h1>Тестирование кандидата</h1>
-      </div>
-      <p class="hint">Тест собирается случайной выборкой заданий и уникальными параметрами для каждого кандидата. Результат определяет категорию и грейд.</p>
-      <div class="testing-panel">
-        <label class="field-label">Кандидат</label>
-        <select id="test-candidate" class="select-wide"></select>
-        <label class="field-label">Специализация</label>
-        <select id="test-role" class="select-wide"></select>
-        <label class="field-label">Заявляемый грейд</label>
-        <select id="test-grade" class="select-wide"></select>
-        <button class="btn btn--primary" id="btn-start-test">Начать тест</button>
-      </div>
-      <div id="test-container"></div>
+    <!-- Candidate dashboard -->
+    <section id="candidate-screen" class="screen hidden">
+      <nav class="nav">
+        <a href="#" data-tab="profile" class="active">Профиль</a>
+        <a href="#" data-tab="testing">Тест</a>
+        <a href="#" data-tab="offers">Приглашения</a>
+        <a href="#" data-tab="applications">Мои отклики</a>
+        <a href="#" data-tab="tasks">Задания</a>
+        <a href="#" data-tab="vacancies">Вакансии</a>
+        <a href="#" data-tab="privacy">Приватность</a>
+      </nav>
+
+      <section class="tab-section" data-tab="profile">
+        <h1>Мой профиль</h1>
+        <form id="candidate-profile" class="form grid-2"></form>
+        <div id="candidate-profile-ldata" class="cards"></div>
+      </section>
+
+      <section class="tab-section hidden" data-tab="testing">
+        <h1>Тестирование</h1>
+        <p class="hint">Тест собирается случайной выборкой заданий и уникальными параметрами. Смена грейда возможна не чаще раза в 90 дней.</p>
+        <div class="testing-panel">
+          <label class="field-label">Специализация
+            <select id="test-role" class="select-wide"></select>
+          </label>
+          <label class="field-label">Заявляемый грейд
+            <select id="test-grade" class="select-wide"></select>
+          </label>
+          <button class="btn btn--primary" id="btn-start-test">Начать тест</button>
+        </div>
+        <div id="test-container"></div>
+      </section>
+
+      <section class="tab-section hidden" data-tab="offers">
+        <h1>Приглашения от работодателей</h1>
+        <p class="hint">Контакты работодателя раскрываются сразу. Откликнувшись/приняв — вы откроете свои контакты этому работодателю.</p>
+        <div id="offers-list" class="cards"></div>
+      </section>
+
+      <section class="tab-section hidden" data-tab="applications">
+        <h1>Мои отклики на вакансии</h1>
+        <p class="hint">Самостоятельные отклики — дополнительный канал: вы тоже можете проявить инициативу.</p>
+        <div id="applications-list" class="cards"></div>
+      </section>
+
+      <section class="tab-section hidden" data-tab="tasks">
+        <h1>Регулярные задания от работодателей</h1>
+        <p class="hint">Поддерживает ваш профиль в актуальном состоянии и даёт работодателю свежий сигнал.</p>
+        <div id="tasks-list" class="cards"></div>
+      </section>
+
+      <section class="tab-section hidden" data-tab="vacancies">
+        <h1>Открытые вакансии</h1>
+        <p class="hint">Можно откликнуться самостоятельно (отклик раскрывает ваши контакты этому работодателю).</p>
+        <div id="vacancies-public-list" class="cards"></div>
+      </section>
+
+      <section class="tab-section hidden" data-tab="privacy">
+        <h1>Настройки приватности (152-ФЗ)</h1>
+        <p class="hint">Управляйте тем, что работодатель видит о вас.</p>
+        <form id="privacy-form" class="form"></form>
+      </section>
     </section>
 
-    <!-- Вакансии -->
-    <section id="vacancies" class="tab-section hidden">
-      <div class="section-head">
+    <!-- Employer dashboard -->
+    <section id="employer-screen" class="screen hidden">
+      <nav class="nav">
+        <a href="#" data-tab="company" class="active">Компания</a>
+        <a href="#" data-tab="vacancies">Вакансии</a>
+        <a href="#" data-tab="search">Поиск кандидатов</a>
+        <a href="#" data-tab="matches">Подбор</a>
+        <a href="#" data-tab="offers">Офферы</a>
+        <a href="#" data-tab="applications">Отклики</a>
+        <a href="#" data-tab="tasks">Задания</a>
+      </nav>
+
+      <section class="tab-section" data-tab="company">
+        <h1>Профиль компании</h1>
+        <form id="company-form" class="form grid-2"></form>
+      </section>
+
+      <section class="tab-section hidden" data-tab="vacancies">
         <h1>Вакансии</h1>
-        <button class="btn" id="btn-add-vacancy">+ Добавить вакансию</button>
-      </div>
-      <form id="vacancy-form" class="form hidden">
-        <input name="title" placeholder="Название *" required />
-        <input name="company" placeholder="Компания *" required />
-        <textarea name="description" placeholder="Описание"></textarea>
-        <input name="stack" placeholder="Стек через запятую: python,go *" required />
-        <select name="grade" required>
-          <option value="">Грейд *</option>
-          <option>junior</option>
-          <option>middle</option>
-          <option>senior</option>
-          <option>lead</option>
-        </select>
-        <select name="role" required>
-          <option value="">Роль *</option>
-          <option>backend</option>
-          <option>frontend</option>
-          <option>fullstack</option>
-          <option>ml</option>
-          <option>devops</option>
-          <option>robotics</option>
-          <option>qa</option>
-        </select>
-        <input name="salary_from" type="number" min="0" placeholder="Зарплата от" />
-        <input name="salary_to" type="number" min="0" placeholder="Зарплата до" />
-        <select name="work_format">
-          <option value="office">Офис</option>
-          <option value="hybrid">Гибрид</option>
-          <option value="remote">Удалённо</option>
-        </select>
-        <input name="city" placeholder="Город" />
-        <div class="form__actions">
-          <button class="btn btn--primary" type="submit">Сохранить</button>
-          <button class="btn btn--ghost" type="button" id="cancel-vacancy">Отмена</button>
-        </div>
-      </form>
-      <div id="vacancies-list" class="cards"></div>
-    </section>
+        <button class="btn" id="btn-toggle-vacancy-form">+ Добавить вакансию</button>
+        <form id="vacancy-form" class="form grid-2 hidden"></form>
+        <div id="employer-vacancies-list" class="cards"></div>
+      </section>
 
-    <!-- Подбор (обратная механика) -->
-    <section id="matches" class="tab-section hidden">
-      <div class="section-head">
-        <h1>Подбор кандидатов</h1>
-      </div>
-      <p class="hint">Выберите вакансию — система покажет релевантных кандидатов по подтверждаемому профилю.</p>
-      <select id="match-vacancy" class="select-wide"></select>
-      <div id="matches-list" class="cards"></div>
-    </section>
+      <section class="tab-section hidden" data-tab="search">
+        <h1>Поиск по банку кандидатов</h1>
+        <form id="search-form" class="form grid-3">
+          <label>Специализация
+            <select name="role">
+              <option value="">Любая</option>
+              <option>backend</option><option>frontend</option><option>fullstack</option>
+              <option>ml</option><option>devops</option><option>robotics</option><option>qa</option>
+            </select>
+          </label>
+          <label>Грейд
+            <select name="grade">
+              <option value="">Любой</option>
+              <option>junior</option><option>middle</option><option>senior</option><option>lead</option>
+            </select>
+          </label>
+          <label>Формат
+            <select name="work_format">
+              <option value="">Любой</option>
+              <option>office</option><option>hybrid</option><option>remote</option>
+            </select>
+          </label>
+          <label>Стек
+            <input name="stack" placeholder="python,go" />
+          </label>
+          <label>Город
+            <input name="city" placeholder="Москва" />
+          </label>
+          <label class="checkbox">
+            <input type="checkbox" name="fsp_only" />
+            <span>Только с подтверждёнными достижениями ФСП</span>
+          </label>
+          <div class="form__actions">
+            <button class="btn btn--primary" type="submit">Найти</button>
+          </div>
+        </form>
+        <div id="search-results" class="cards"></div>
+      </section>
 
-    <!-- Офферы -->
-    <section id="offers" class="tab-section hidden">
-      <div class="section-head">
-        <h1>Офферы</h1>
-      </div>
-      <p class="hint">Работодатель выходит на кандидата с вакансией и зарплатой.</p>
-      <div id="offers-list" class="cards"></div>
+      <section class="tab-section hidden" data-tab="matches">
+        <h1>Подбор по категориям</h1>
+        <p class="hint">Выберите вакансию — система покажет категоризированных кандидатов с объяснением выдачи.</p>
+        <label class="field-label">Вакансия
+          <select id="match-vacancy" class="select-wide"></select>
+        </label>
+        <div id="matches-list" class="cards"></div>
+      </section>
+
+      <section class="tab-section hidden" data-tab="offers">
+        <h1>Отправленные офферы</h1>
+        <p class="hint">Контакты кандидата раскрываются только после того, как кандидат принял оффер или сам откликнулся на вакансию.</p>
+        <div id="employer-offers-list" class="cards"></div>
+      </section>
+
+      <section class="tab-section hidden" data-tab="applications">
+        <h1>Входящие отклики</h1>
+        <p class="hint">Кандидаты, проявившие инициативу — здесь.</p>
+        <div id="employer-applications-list" class="cards"></div>
+      </section>
+
+      <section class="tab-section hidden" data-tab="tasks">
+        <h1>Регулярные задания</h1>
+        <p class="hint">Отправляйте короткие задачи выбранным кандидатам — это поддерживает их профиль в актуальном состоянии.</p>
+        <form id="task-form" class="form grid-2 hidden">
+          <label>Кандидат
+            <select name="candidate_id" id="task-candidate"></select>
+          </label>
+          <label>Вакансия (опц.)
+            <select name="vacancy_id" id="task-vacancy">
+              <option value="">— не привязано —</option>
+            </select>
+          </label>
+          <label class="full">Заголовок
+            <input name="title" required />
+          </label>
+          <label class="full">Описание
+            <textarea name="description" rows="3" required></textarea>
+          </label>
+          <div class="form__actions full">
+            <button class="btn btn--primary" type="submit">Отправить задание</button>
+            <button class="btn btn--ghost" type="button" id="cancel-task">Отмена</button>
+          </div>
+        </form>
+        <button class="btn" id="btn-toggle-task-form">+ Назначить задание</button>
+        <div id="employer-tasks-list" class="cards"></div>
+      </section>
     </section>
   </main>
 
-  <footer class="footer">
-    <div class="container">Прототип MVP · Отраслевой агрегатор ИТ-вакансий · Достижения ФСП</div>
-  </footer>
+  <div id="toast" class="toast hidden"></div>
 
   <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/candidate.js"></script>
+  <script src="js/employer.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
